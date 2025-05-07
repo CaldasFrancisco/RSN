@@ -1,0 +1,640 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#121212">
+  <meta name="description" content="TEMPLATE INTERATIVO – ROTINA SAGRADA DE FRANCISCO">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>ROTINA SAGRADA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #121212;
+      color: #FFFFFF;
+      text-transform: uppercase;
+    }
+    h1, h2 {
+      color: #FFFFFF;
+    }
+    .section {
+      background: #333333;
+      padding: 1rem 1.5rem;
+      margin: 1rem 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .checklist label {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+    }
+    input[type="checkbox"], input[type="radio"] {
+      margin-right: 0.5rem;
+      accent-color: #1E88E5;
+    }
+    p, ul {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    .mood-selector {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .mood-selector button {
+      font-size: 1.5rem;
+      padding: 0.5rem;
+      border: none;
+      background: #444444;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .mood-selector button:hover {
+      transform: scale(1.1);
+      background: #555555;
+    }
+    .mood-selector button.selected {
+      background: #1E88E5;
+    }
+    .water-tracker select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 5px;
+      background: #444444;
+      color: #FFFFFF;
+      border: 1px solid #FFFFFF;
+    }
+    .todo-list input[type="text"], .gratitude input[type="text"], .calendar input {
+      width: calc(100% - 2rem);
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border: 1px solid #FFFFFF;
+      border-radius: 5px;
+      background: #444444;
+      color: #FFFFFF;
+      text-transform: uppercase;
+    }
+    .pomodoro {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .pomodoro button, .calendar button, #request-notifications, #reset-data {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .pomodoro button:hover, .calendar button:hover, #request-notifications:hover, #reset-data:hover {
+      transform: scale(1.05);
+    }
+    .pomodoro button {
+      background: #1E88E5;
+    }
+    .pomodoro button:disabled {
+      background: #555555;
+    }
+    .calendar button {
+      background: #2E7D32;
+    }
+    #request-notifications, #reset-data {
+      background: #D81B60;
+    }
+    .pomodoro span {
+      font-size: 1.2rem;
+    }
+    .mood-date {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    footer p {
+      text-transform: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 ROTINA SAGRADA DE FRANCISCO – OTIMIZAÇÃO TOTAL</h1>
+
+  <div class="section">
+    <h2>🔄 REINICIAR DADOS</h2>
+    <button id="reset-data">REINICIAR TODOS OS DADOS</button>
+  </div>
+
+  <div class="section">
+    <h2>🔔 ATIVAR NOTIFICAÇÕES</h2>
+    <button id="request-notifications">PERMITIR NOTIFICAÇÕES</button>
+  </div>
+
+  <div class="section">
+    <h2>🍅 POMODORO TIMER</h2>
+    <div class="pomodoro">
+      <span id="pomodoro-time">25:00</span>
+      <span id="pomodoro-mode">FOCO</span>
+      <button id="pomodoro-start">INICIAR</button>
+      <button id="pomodoro-pause" disabled>PAUSAR</button>
+      <button id="pomodoro-reset">REINICIAR</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📅 ADICIONAR AO GOOGLE AGENDA – DAY ONE (1)</h2>
+    <div class="calendar">
+      <input type="text" id="event-title" placeholder="TÍTULO DO EVENTO">
+      <input type="text" id="event-description" placeholder="DESCRIÇÃO">
+      <input type="date" id="event-date">
+      <input type="time" id="event-start">
+      <input type="time" id="event-end">
+      <button id="add-to-calendar">ADICIONAR AO GOOGLE AGENDA</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>😊 MEU HUMOR HOJE</h2>
+    <div class="mood-selector">
+      <button data-mood="happy">😊</button>
+      <button data-mood="neutral">😐</button>
+      <button data-mood="sad">😥</button>
+      <button data-mood="frustrated">😣</button>
+      <button data-mood="angry">😡</button>
+    </div>
+    <div class="mood-date" id="mood-date"></div>
+  </div>
+
+  <div class="section">
+    <h2>💧 GARRAFAS DE ÁGUA (1,8L)</h2>
+    <div class="water-tracker">
+      <label>QUANTAS GARRAFAS BEBI HOJE: 
+        <select id="water-count">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>✅ TO-DO LIST (MÁXIMO 5 TAREFAS)</h2>
+    <div class="todo-list">
+      <label><input type="checkbox" id="todo1"> <input type="text" id="todo-text1" placeholder="TAREFA 1"></label>
+      <label><input type="checkbox" id="todo2"> <input type="text" id="todo-text2" placeholder="TAREFA 2"></label>
+      <label><input type="checkbox" id="todo3"> <input type="text" id="todo-text3" placeholder="TAREFA 3"></label>
+      <label><input type="checkbox" id="todo4"> <input type="text" id="todo-text4" placeholder="TAREFA 4"></label>
+      <label><input type="checkbox" id="todo5"> <input type="text" id="todo-text5" placeholder="TAREFA 5"></label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🙏 DIÁRIO DE GRATIDÃO</h2>
+    <div class="gratitude">
+      <input type="text" id="gratitude1" placeholder="1. SOU GRATO POR...">
+      <input type="text" id="gratitude2" placeholder="2. SOU GRATO POR...">
+      <input type="text" id="gratitude3" placeholder="3. SOU GRATO POR...">
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🌙 ANTES DE DORMIR (PREPARAÇÃO DO DIA SEGUINTE)</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="sleep1"> SEPARAR ROUPA DE TREINO E ROUPA DO DIA SEGUINTE</label>
+      <label><input type="checkbox" id="sleep2"> SEPARAR SUPLEMENTOS DA MANHÃ E PRÉ-TREINO (CAFEÍNA, CREATINA, BETA-ALANINA, CITRULINA, ÔMEGA 3, MAGNÉSIO, B12, BCAA, VENVANSE)</label>
+      <label><input type="checkbox" id="sleep3"> DEIXAR WHEY PROTEIN JÁ MEDIDO EM COQUETELEIRA</label>
+      <label><input type="checkbox" id="sleep4"> ENCHER GARRAFA DE ÁGUA E PREPARAR ÁGUA MORNA COM SAL (LIMPEZA MATINAL)</label>
+      <label><input type="checkbox" id="sleep5"> SPRAY NA CAMA (CHEIRO AGRADÁVEL PARA O DESPERTAR)</label>
+      <label><input type="checkbox" id="sleep6"> VERIFICAR COMPROMISSOS OU URGÊNCIAS DO DIA SEGUINTE</label>
+      <label><input type="checkbox" id="sleep7"> PREPARAR CENÁRIO DE GRAVAÇÃO (LUZ, MICROFONE, FUNDO LIMPO)</label>
+      <label><input type="checkbox" id="sleep8"> FIXAR SUPORTE DE PAREDES COM VÁCUO PARA CALCINHA (PROVIDENCIAR ITEM)</label>
+      <label><input type="checkbox" id="sleep9"> SUBSTITUIR TOALHAS QUE SOLTAM PELO (TROCAR POR TOALHAS DE MICROFIBRA PRETA ANTI-FIAPO)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>⏰ 4H00 – ACORDAR COM PROPÓSITO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="wake1"> LEVANTAR NA HORA (SEM SONECA)</label>
+      <label><input type="checkbox" id="wake2"> ARRUMAR A CAMA E PASSAR SPRAY AROMATIZADOR</label>
+      <label><input type="checkbox" id="wake3"> BEBER ÁGUA MORNA COM SAL (LIMPEZA INTESTINAL)</label>
+      <label><input type="checkbox" id="wake4"> ORAÇÃO: "SENHOR, ME CONDUZ HOJE COM FOCO, HONRA, SABEDORIA E MULTIPLICAÇÃO. USA MINHA VIDA PARA IMPACTAR OUTRAS E ME GUARDA DO MAL."</label>
+      <label><input type="checkbox" id="wake5"> LEITURA DA BÍBLIA E ESTUDO TEMÁTICO CONFORME A FREQUÊNCIA QUE ESTOU CRIANDO (EX: PROSPERIDADE: PROVÉRBIOS, ECLESIASTES, DEUTERONÔMIO)</label>
+      <label><input type="checkbox" id="wake6"> VISUALIZAÇÃO GUIADA (5 MIN): FRANCISCO BILIONÁRIO, AJUDANDO MILHÕES, EM PAZ, FORTE E FOCADO</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>☕ 4H30 – CAFÉ PRETO E SUPLEMENTOS + SAÍDA PRA TREINO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="supp1"> SUPLEMENTOS: CAFEÍNA + CREATINA + BETA-ALANINA + CITRULINA + BCAA + ÔMEGA 3 + MAGNÉSIO + B12 + VENVANSE</label>
+      <label><input type="checkbox" id="supp2"> ALONGAMENTO RÁPIDO DE 5 MINUTOS</label>
+      <label><input type="checkbox" id="supp3"> SAIR ATÉ 4H50</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🏋️‍♂️ 5H00 – 6H10 – ACADEMIA</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="gym1"> TREINO COM FOCO EM MASSA MAGRA E QUEIMA DE GORDURA</label>
+      <label><input type="checkbox" id="gym2"> REGISTRAR PESOS, SÉRIES E REPETIÇÕES NO APP OU CADERNO</label>
+      <label><input type="checkbox" id="gym3"> OUVIR ÁUDIO BINAURAL SEM LETRA</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🛁 6H10 – 6H30 – BANHO + PREPARAÇÃO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="bath1"> BANHO COM MÚSICA DE FOCO OU EM SILÊNCIO</label>
+      <label><input type="checkbox" id="bath2"> ROUPA JÁ SEPARADA DO DIA ANTERIOR</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🍽️ 6H30 – 7H00 – CAFÉ DA MANHÃ ESTRATÉGICO</h2>
+    <div class="checklist">
+      <label><input type="radio" name="breakfast" id="breakfast1" value="option1"> OPÇÃO 1: 3 OVOS INTEIROS + 50G DE VEGETAIS + 1 FATIA DE PÃO DE AVEIA (110G, 280 KCAL)</label>
+      <label><input type="radio" name="breakfast" id="breakfast2" value="option2"> OPÇÃO 2: SHAKE COM WHEY (30G), 1 BANANA (70G), 1 COLHER DE PASTA DE AMENDOIM (10G) – ~300 KCAL</label>
+      <label><input type="radio" name="breakfast" id="breakfast3" value="option3"> OPÇÃO 3: 2 OVOS + 1 FATIA DE PÃO + 100G DE FRUTAS VERMELHAS – ~310 KCAL</label>
+    </div>
+    <p>META: CALORIAS TOTAIS POR REFEIÇÃO: 300–320 KCAL, DENTRO DA META DE 1.100 KCAL POR DIA (FASE 1)</p>
+  </div>
+
+  <div class="section">
+    <h2>🚀 7H00 – 9H00 – EXECUÇÃO PROFUNDA: LUCRO PURO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="work1"> VER 1 FUNIL POR DIA (FRANCISCO, CATARINA, FAGNER, PEDRO)</label>
+      <label><input type="checkbox" id="work2"> AJUSTAR OFERTA (PREÇO, COPY, ESTRUTURA)</label>
+      <label><input type="checkbox" id="work3"> VER CAMPANHAS GOOGLE E FACEBOOK ADS (MÉTRICAS + CRIATIVOS)</label>
+      <label><input type="checkbox" id="work4"> ESTUDAR CONCORRENTES: O QUE ESTÃO POSTANDO, CONTEÚDO, REMARKETING, REELS</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🧹 9H00 – 9H30 – RESET DA CASA + WHATSAPP</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="reset1"> ARRUMAR AMBIENTE VISUAL</label>
+      <label><input type="checkbox" id="reset2"> VER LISTA DE MERCADO</label>
+      <label><input type="checkbox" id="reset3"> RESPONDER MENSAGENS IMPORTANTES (MÁX. 30 MIN)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🌍 9H30 – 12H00 – CRIAÇÃO DE CONTEÚDO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="content1"> PRODUZIR: 2 REELS + 2 POSTS POR DIA</label>
+      <label><input type="checkbox" id="content2"> CRIAR 40 CRIATIVOS POR SEMANA (10 POR PROJETO)</label>
+      <label><input type="checkbox" id="content3"> GRAVAR 2 CURSOS POR SEMANA COM 14 AULAS TOTAIS (FREQUÊNCIAS: AMOR, PROSPERIDADE, EX, EMAGRECIMENTO)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🍽️ 12H00 – 13H00 – ALMOÇO</h2>
+    <p>COMIDA LIMPA, LEVE, COM PROTEÍNAS MAGRAS E VEGETAIS</p>
+  </div>
+
+  <div class="section">
+    <h2>🧼 13H00 – 13H30 – ORGANIZAÇÃO RÁPIDA</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="org1"> ROUPAS, LOUÇA, AJUSTES BÁSICOS</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>☀️ 13H30 – 14H00 – SOL NO CORPO + CONEXÃO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="sun1"> TOMAR SOL 10–15 MIN</label>
+      <label><input type="checkbox" id="sun2"> LIGAR PARA ALGUÉM IMPORTANTE</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📚 14H00 – 15H00 – ESTUDO DE TRÁFEGO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="study1"> ANALISAR CRIATIVOS, ESTRUTURA E SEGMENTAÇÕES</label>
+      <label><input type="checkbox" id="study2"> ESTUDAR GOOGLE ADS, FACEBOOK ADS, REMARKETING, SCRIPTS E CRIATIVOS INTERNACIONAIS</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📈 15H00 – 16H00 – MÉTRICAS + PENDÊNCIAS</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="metrics1"> VER TRELLO, HOTMART, MANYCHAT, PLANILHAS</label>
+      <label><input type="checkbox" id="metrics2"> DIAGNOSTICAR KPIS E SUGERIR AJUSTES PARA O DIA SEGUINTE</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🧩 16H00 – 17H00 – FECHAMENTO DE CICLOS</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="close1"> ENCERRAR PENDÊNCIAS, MARCAR FOLLOW-UPS</label>
+      <label><input type="checkbox" id="close2"> COBRAR RETORNOS, REPLANEJAR O QUE FICOU ABERTO</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>💡 17H00 – 18H00 – CRIATIVOS OU REUNIÃO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="create1"> GRAVAR CONTEÚDO NOVO SE NÃO HOUVER REUNIÃO</label>
+      <label><input type="checkbox" id="create2"> REUNIÃO COM PAUTA E TEMPO LIMITE (18H30)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🥣 19H00 – JANTAR LEVE</h2>
+    <p>SUGESTÃO: SOPA DE OSSOS (200ML) COM LEGUMES OU CALDO PROTEICO<br>
+    ALTERNATIVA: FRANGO DESFIADO + LEGUMES COZIDOS</p>
+  </div>
+
+  <div class="section">
+    <h2>🛁 19H30 – BANHO RELAXANTE + PAZ</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="relax1"> LUZ BAIXA, MÚSICA AMBIENTE OU SILÊNCIO</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🌙 20H00 – CONVERSA + PLANEJAMENTO</h2>
+    <div class="checklist">
+      <label><input type="checkbox" id="plan1"> FALAR COM ESPOSA, REVISAR AGENDA</label>
+      <label><input type="checkbox" id="plan2"> CHECAR SE HAVERÁ URGÊNCIAS OU DECISÕES NO DIA SEGUINTE</label>
+    </div>
+  </div>
+
+  <footer>
+    <p style="text-align:center; margin-top: 2rem; font-size: 0.9rem;">Criado por Francisco Caldas • Atualizado por CRONOS</p>
+  </footer>
+
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Error:', err));
+    }
+
+    // Set current date in mood section
+    const moodDate = document.getElementById('mood-date');
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    moodDate.textContent = `DATA: ${formattedDate}`;
+
+    // Reset data
+    const resetButton = document.getElementById('reset-data');
+    resetButton.addEventListener('click', () => {
+      if (confirm('TEM CERTEZA QUE DESEJA REINICIAR TODOS OS DADOS?')) {
+        localStorage.clear();
+        location.reload();
+      }
+    });
+
+    // Request notification permission
+    const requestNotifications = document.getElementById('request-notifications');
+    if ('Notification' in window) {
+      requestNotifications.addEventListener('click', () => {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            new Notification('NOTIFICAÇÕES ATIVADAS!');
+            requestNotifications.disabled = true;
+          }
+        });
+      });
+    } else {
+      requestNotifications.disabled = true;
+      requestNotifications.textContent = 'NOTIFICAÇÕES NÃO SUPORTADAS';
+    }
+
+    // Pomodoro Timer with Sounds
+    let pomodoroInterval;
+    let isRunning = false;
+    let isFocus = true;
+    let timeLeft = 25 * 60; // 25 minutes in seconds
+    const pomodoroTime = document.getElementById('pomodoro-time');
+    const pomodoroMode = document.getElementById('pomodoro-mode');
+    const startButton = document.getElementById('pomodoro-start');
+    const pauseButton = document.getElementById('pomodoro-pause');
+    const resetPomodoroButton = document.getElementById('pomodoro-reset');
+
+    // Audio for Pomodoro (base64-encoded WAV, short beeps)
+    const focusSound = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    const breakSound = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    const endSound = new Audio('data:audio/wav;base64,UklGRiwAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      const seconds = (timeLeft % 60).toString().padStart(2, '0');
+      pomodoroTime.textContent = `${minutes}:${seconds}`;
+      pomodoroMode.textContent = isFocus ? 'FOCO' : 'PAUSA';
+    }
+
+    function startPomodoro() {
+      if (!isRunning) {
+        isRunning = true;
+        startButton.disabled = true;
+        pauseButton.disabled = false;
+        focusSound.play();
+        pomodoroInterval = setInterval(() => {
+          timeLeft--;
+          updateTimerDisplay();
+          if (timeLeft <= 0) {
+            isFocus = !isFocus;
+            timeLeft = isFocus ? 25 * 60 : 5 * 60;
+            updateTimerDisplay();
+            endSound.play();
+            if (isFocus) focusSound.play();
+            else breakSound.play();
+            new Notification(isFocus ? 'HORA DE FOCAR!' : 'HORA DE PAUSAR!');
+          }
+        }, 1000);
+      }
+    }
+
+    function pausePomodoro() {
+      if (isRunning) {
+        isRunning = false;
+        clearInterval(pomodoroInterval);
+        startButton.disabled = false;
+        pauseButton.disabled = true;
+      }
+    }
+
+    function resetPomodoro() {
+      clearInterval(pomodoroInterval);
+      isRunning = false;
+      isFocus = true;
+      timeLeft = 25 * 60;
+      updateTimerDisplay();
+      startButton.disabled = false;
+      pauseButton.disabled = true;
+    }
+
+    startButton.addEventListener('click', startPomodoro);
+    pauseButton.addEventListener('click', pausePomodoro);
+    resetPomodoroButton.addEventListener('click', resetPomodoro);
+
+    // Google Calendar Integration
+    const addToCalendar = document.getElementById('add-to-calendar');
+    addToCalendar.addEventListener('click', () => {
+      const title = document.getElementById('event-title').value;
+      const description = document.getElementById('event-description').value;
+      const date = document.getElementById('event-date').value;
+      const startTime = document.getElementById('event-start').value;
+      const endTime = document.getElementById('event-end').value;
+
+      if (title && date && startTime && endTime) {
+        const startDateTime = new Date(`${date}T${startTime}`);
+        const endDateTime = new Date(`${date}T${endTime}`);
+        const formatDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(description)}&dates=${formatDate(startDateTime)}/${formatDate(endDateTime)}`;
+        window.open(calendarUrl, '_blank');
+      } else {
+        alert('PREENCHA TODOS OS CAMPOS OBRIGATÓRIOS!');
+      }
+    });
+
+    /* Para integração automática com Google Calendar via API:
+       1. Crie um projeto no Google Cloud Console (console.cloud.google.com).
+       2. Habilite a API do Google Calendar.
+       3. Crie credenciais OAuth 2.0.
+       4. Use Google Apps Script ou um backend (ex.: Node.js) para autenticar e enviar eventos.
+       Exemplo de Google Apps Script:
+       function createEvent(title, description, start, end) {
+         const calendar = CalendarApp.getDefaultCalendar();
+         calendar.createEvent(title, new Date(start), new Date(end), { description });
+       }
+       Hospede este template em um servidor com backend para chamadas API.
+    */
+
+    // Mood selector
+    const moodButtons = document.querySelectorAll('.mood-selector button');
+    const savedMood = localStorage.getItem('selectedMood');
+    moodButtons.forEach(button => {
+      if (button.dataset.mood === savedMood) {
+        button.classList.add('selected');
+      }
+      button.addEventListener('click', () => {
+        moodButtons.forEach(btn => btn.classList.remove('selected'));
+        button.classList.add('selected');
+        localStorage.setItem('selectedMood', button.dataset.mood);
+        new Notification(`HUMOR SELECIONADO: ${button.textContent}`);
+      });
+    });
+
+    // Water tracker
+    const waterSelect = document.getElementById('water-count');
+    waterSelect.value = localStorage.getItem('waterCount') || '0';
+    waterSelect.addEventListener('change', () => {
+      localStorage.setItem('waterCount', waterSelect.value);
+      new Notification(`GARRAFAS DE ÁGUA ATUALIZADAS: ${waterSelect.value}`);
+    });
+
+    // To-Do List
+    document.querySelectorAll('.todo-list input[type="text"]').forEach((input, index) => {
+      const savedText = localStorage.getItem(`todo-text${index + 1}`);
+      if (savedText) input.value = savedText;
+      input.addEventListener('input', () => {
+        localStorage.setItem(`todo-text${index + 1}`, input.value);
+      });
+    });
+    document.querySelectorAll('.todo-list input[type="checkbox"]').forEach((checkbox, index) => {
+      const savedState = localStorage.getItem(`todo${index + 1}`);
+      if (savedState === 'true') checkbox.checked = true;
+      checkbox.addEventListener('change', () => {
+        localStorage.setItem(`todo${index + 1}`, checkbox.checked);
+        if (checkbox.checked) {
+          const taskText = document.getElementById(`todo-text${index + 1}`).value || `TAREFA ${index + 1}`;
+          new Notification(`TAREFA CONCLUÍDA: ${taskText}`);
+        }
+      });
+    });
+
+    // Gratitude Journal
+    document.querySelectorAll('.gratitude input[type="text"]').forEach((input, index) => {
+      const savedText = localStorage.getItem(`gratitude${index + 1}`);
+      if (savedText) input.value = savedText;
+      input.addEventListener('input', () => {
+        localStorage.setItem(`gratitude${index + 1}`, input.value);
+      });
+    });
+
+    // Breakfast selection
+    const breakfastRadios = document.querySelectorAll('input[name="breakfast"]');
+    const savedBreakfast = localStorage.getItem('breakfast');
+    if (savedBreakfast) {
+      document.getElementById(`breakfast${savedBreakfast.slice(-1)}`).checked = true;
+    }
+    breakfastRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        localStorage.setItem('breakfast', radio.value);
+        new Notification(`CAFÉ DA MANHÃ SELECIONADO: ${radio.parentElement.textContent}`);
+      });
+    });
+
+    // Checkboxes for routine
+    document.querySelectorAll('.checklist input[type="checkbox"]').forEach(checkbox => {
+      const savedState = localStorage.getItem(checkbox.id);
+      if (savedState === 'true') {
+        checkbox.checked = true;
+      }
+      checkbox.addEventListener('change', () => {
+        localStorage.setItem(checkbox.id, checkbox.checked);
+        if (checkbox.checked) {
+          const taskText = checkbox.parentElement.textContent;
+          new Notification(`TAREFA CONCLUÍDA: ${taskText}`);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
